@@ -76,17 +76,99 @@ namespace ChipSharpConsoleWindows
         /// <param name="opcode">The opcode to execute</param>
         public void ExecuteOpcode(ushort opcode)
         {
-            switch (opcode)
+            ushort nibble = (ushort)(opcode & 0xF000);
+            switch (nibble)
             {
                 case 0x0000:
+                    if (opcode == 0x00E0)
+                    {
+                        // Clears the screen.
+                        Array.Clear(this.Display, 0, this.Display.Length);
+                    }
+                    else if (opcode == 0x00EE)
+                    {
+                        // Returns from a subroutine.
+                        this.Stack.Pop();
+                    }
                     break;
-                case 0x00E0:
-                    // Clears the screen.
-                    Array.Clear(this.Display, 0, this.Display.Length);
+                case 0x1000:
+                    this.IAddress = (ushort)(opcode & 0x0FFF);
                     break;
-                case 0x00EE:
-                    // Returns from a subroutine.
-                    this.Stack.Pop();
+                case 0x2000:
+                    this.Stack.Push(IAddress);
+                    this.IAddress = (ushort)(opcode & 0x0FFF);
+                    break;
+                case 0x3000:
+                    if (this.Registers[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                    {
+                        this.IAddress += 2;
+                    }
+                    break;
+                case 0x4000:
+                    if (this.Registers[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                    {
+                        this.IAddress += 2;
+                    }
+                    break;
+                case 0x5000:
+                    if ((this.Registers[(opcode & 0x0F00) >> 8]) == (this.Registers[(opcode & 0x00F0) >> 4]))
+                    {
+                        this.IAddress += 2;
+                    }
+                    break;
+                case 0x6000:
+                    (this.Registers[(opcode & 0x0F00) >> 8]) = (byte)(opcode & 0x00FF);
+                    break;
+                case 0x7000:
+                    (this.Registers[(opcode & 0x0F00) >> 8]) += (byte)(opcode & 0x00FF);
+                    break;
+                case 0x8000:
+                    byte vx = (byte)((opcode & 0x0F00) >> 8);
+                    byte vy = (byte)((opcode & 0x00F0) >> 4);
+                    switch (opcode & 0x000F)
+                    {
+                        case 0:
+                            this.Registers[vx] = this.Registers[vy];
+                            break;
+                        case 1:
+                            this.Registers[vx] = (byte)(this.Registers[vx] | this.Registers[vy]);
+                            break;
+                        case 2:
+                            this.Registers[vx] = (byte)(this.Registers[vx] & this.Registers[vy]);
+                            break;
+                        case 3:
+                            this.Registers[vx] = (byte)(this.Registers[vx] ^ this.Registers[vy]);
+                            break;
+                        case 4:
+                            this.Registers[15] = (byte)(this.Registers[vx] + this.Registers[vy] > 255 ? 1 : 0);
+                            this.Registers[vx] = (byte)((this.Registers[vx] + this.Registers[vy]) & 0x00FF);
+                            break;
+                        case 5:
+                            this.Registers[15] = (byte)(this.Registers[vx] > this.Registers[vy] ? 1 : 0);
+                            this.Registers[vx] = (byte)((this.Registers[vx] - this.Registers[vy]) & 0x00FF);
+                            break;
+                        case 6:
+                            this.Registers[15] = (byte)(this.Registers[vx] & 0x0001);
+                            this.Registers[vx] >>= 1;
+                            break;
+                        case 7:
+                            this.Registers[15] = (byte)(this.Registers[vy] > this.Registers[vx] ? 1 : 0);
+                            this.Registers[vx] = (byte)((this.Registers[vy] - this.Registers[vx]) & 0x00FF);
+                            break;
+                        case 14:
+                            this.Registers[15] = (byte)(((this.Registers[vx] & 0x80) == 0x80) ? 1 : 0);
+                            this.Registers[vx] <<= 1;
+                            break;
+                    }
+                    break;
+                case 0x9000:
+                    if (this.Registers[(opcode & 0x0F00) >> 8] != (this.Registers[(opcode & 0x00F0) >> 4]))
+                    {
+                        this.IAddress += 2;
+                    }
+                    break;
+                case 0xA000:
+                    this.IAddress = (ushort)(opcode & 0x0FFF);
                     break;
                 default:
                     throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
