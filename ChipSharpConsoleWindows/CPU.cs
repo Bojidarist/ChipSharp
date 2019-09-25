@@ -21,6 +21,11 @@ namespace ChipSharpConsoleWindows
         public byte[] Registers { get; set; }
 
         /// <summary>
+        /// Program Counter
+        /// </summary>
+        public ushort PC { get; set; }
+
+        /// <summary>
         /// 16bit register (For memory address) (Similar to void pointer)
         /// </summary>
         public ushort IAddress { get; set; }
@@ -50,6 +55,16 @@ namespace ChipSharpConsoleWindows
         /// </summary>
         public byte[] Display { get; set; }
 
+        /// <summary>
+        /// Random number generator
+        /// </summary>
+        public Random RNGenerator { get; set; }
+
+        /// <summary>
+        /// Indicates if the program is waiting for a key press
+        /// </summary>
+        public bool WaitingForKeyPress { get; set; }
+
         #endregion
 
         #region Constructors
@@ -63,7 +78,10 @@ namespace ChipSharpConsoleWindows
             this.Memory = new byte[4096];
             this.Registers = new byte[16];
             this.Stack = new Stack<ushort>(24);
+            this.PC = 0x0000;
             this.IAddress = 0x0000;
+            this.RNGenerator = new Random();
+            this.WaitingForKeyPress = false;
         }
 
         #endregion
@@ -77,6 +95,14 @@ namespace ChipSharpConsoleWindows
         public void ExecuteOpcode(ushort opcode)
         {
             ushort nibble = (ushort)(opcode & 0xF000);
+            byte vx = (byte)((opcode & 0x0F00) >> 8);
+            byte vy = (byte)((opcode & 0x00F0) >> 4);
+            if (this.WaitingForKeyPress)
+            {
+                this.Registers[vx] = this.Keyboard;
+                return;
+            }
+
             switch (nibble)
             {
                 case 0x0000:
@@ -90,30 +116,34 @@ namespace ChipSharpConsoleWindows
                         // Returns from a subroutine.
                         this.Stack.Pop();
                     }
+                    else
+                    {
+                        throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
+                    }
                     break;
                 case 0x1000:
-                    this.IAddress = (ushort)(opcode & 0x0FFF);
+                    this.PC = (ushort)(opcode & 0x0FFF);
                     break;
                 case 0x2000:
-                    this.Stack.Push(IAddress);
-                    this.IAddress = (ushort)(opcode & 0x0FFF);
+                    this.Stack.Push(PC);
+                    this.PC = (ushort)(opcode & 0x0FFF);
                     break;
                 case 0x3000:
                     if (this.Registers[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
                     {
-                        this.IAddress += 2;
+                        this.PC += 2;
                     }
                     break;
                 case 0x4000:
                     if (this.Registers[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
                     {
-                        this.IAddress += 2;
+                        this.PC += 2;
                     }
                     break;
                 case 0x5000:
                     if ((this.Registers[(opcode & 0x0F00) >> 8]) == (this.Registers[(opcode & 0x00F0) >> 4]))
                     {
-                        this.IAddress += 2;
+                        this.PC += 2;
                     }
                     break;
                 case 0x6000:
@@ -123,8 +153,6 @@ namespace ChipSharpConsoleWindows
                     (this.Registers[(opcode & 0x0F00) >> 8]) += (byte)(opcode & 0x00FF);
                     break;
                 case 0x8000:
-                    byte vx = (byte)((opcode & 0x0F00) >> 8);
-                    byte vy = (byte)((opcode & 0x00F0) >> 4);
                     switch (opcode & 0x000F)
                     {
                         case 0:
@@ -159,16 +187,107 @@ namespace ChipSharpConsoleWindows
                             this.Registers[15] = (byte)(((this.Registers[vx] & 0x80) == 0x80) ? 1 : 0);
                             this.Registers[vx] <<= 1;
                             break;
+                        default:
+                            throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
                     }
                     break;
                 case 0x9000:
                     if (this.Registers[(opcode & 0x0F00) >> 8] != (this.Registers[(opcode & 0x00F0) >> 4]))
                     {
-                        this.IAddress += 2;
+                        this.PC += 2;
                     }
                     break;
                 case 0xA000:
                     this.IAddress = (ushort)(opcode & 0x0FFF);
+                    break;
+                case 0xB000:
+                    this.PC = (ushort)((opcode & 0x0FFF) + (this.Registers[0]));
+                    break;
+                case 0xC000:
+                    this.Registers[vx] = (byte)((this.RNGenerator.Next(0, 255)) & (byte)(opcode & 0xFF));
+                    break;
+                case 0xD000:
+                    int n = opcode & 0x000F;
+                    this.Registers[15] = 0;
+
+                    for (int i = 0; i < n; i++)
+                    {
+                        byte mem = this.Memory[this.IAddress];
+                        for (int j = 0; j < 8; j++)
+                        {
+                            byte pixel = (byte)((mem >> (7 - j)) & 0x01);
+                            int index = vx + j + (vy + i) * 64;
+                            if (pixel == 1 && this.Display[index] == 1)
+                            {
+                                this.Registers[15] = 1;
+                            }
+                            this.Display[index] = (byte)(this.Display[index] ^ pixel);
+                        }
+                    }
+                    break;
+                case 0xE000:
+                    if ((opcode & 0x00FF) == 0x009E)
+                    {
+                        if (((this.Keyboard >> this.Registers[vx]) & 0x01) == 0x01)
+                        {
+                            this.PC += 2;
+                            break;
+                        }
+                    }
+                    else if ((opcode & 0x00FF) == 0x00A1)
+                    {
+                        if (((this.Keyboard >> this.Registers[vx]) & 0x01) != 0x01)
+                        {
+                            this.PC += 2;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
+                    }
+                    break;
+                case 0xF000:
+                    switch (opcode & 0x00FF)
+                    {
+                        case 0x07:
+                            this.Registers[vx] = this.DelayTimer;
+                            break;
+                        case 0x0A:
+                            this.WaitingForKeyPress = true;
+                            break;
+                        case 0x15:
+                            this.DelayTimer = this.Registers[vx];
+                            break;
+                        case 0x18:
+                            this.SoundTimer = this.Registers[vx];
+                            break;
+                        case 0x1E:
+                            this.IAddress = (ushort)(this.IAddress + this.Registers[vx]);
+                            break;
+                        case 0x29:
+                            this.IAddress = (ushort)(this.Registers[vx] * 5);
+                            break;
+                        case 0x33:
+                            this.Memory[this.IAddress] = (byte)(this.Registers[vx] / 100);
+                            this.Memory[this.IAddress + 1] = (byte)((this.Registers[vx] % 100) / 10);
+                            this.Memory[this.IAddress + 2] = (byte)(this.Registers[vx] % 10);
+                            break;
+                        case 0x55:
+                            for (int i = 0; i <= vx; i++)
+                            {
+                                this.Memory[this.IAddress + i] = this.Registers[i];
+                            }
+                            break;
+                        case 0x65:
+                            for (int i = 0; i <= vx; i++)
+                            {
+                                this.Registers[i] = this.Memory[this.IAddress + i];
+                            }
+                            break;
+                        default:
+                            throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
+                    }
                     break;
                 default:
                     throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");

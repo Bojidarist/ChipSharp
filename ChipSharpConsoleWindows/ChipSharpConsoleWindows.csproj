@@ -49,6 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="ROM\HeartMonitor.ch8">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="ROM\IBMLogo.ch8">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

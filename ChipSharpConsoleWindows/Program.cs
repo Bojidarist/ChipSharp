@@ -7,13 +7,13 @@ namespace ChipSharpConsoleWindows
     {
         static void Main()
         {
-            const string testROM = @"ROM\IBMLogo.ch8";
+            const string testROM = @"ROM\HeartMonitor.ch8";
             CPU cpu = new CPU();
 
             // Read the binary file correctly
             using (BinaryReader reader = new BinaryReader(File.Open(testROM, FileMode.Open)))
             {
-                while (reader.BaseStream.Position < reader.BaseStream.Length)
+                while (reader.BaseStream.Position < reader.BaseStream.Length - 1)
                 {
                     ushort opcode = (ushort)(reader.ReadByte() << 8 | reader.ReadByte());
                     try
