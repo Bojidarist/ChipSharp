@@ -65,6 +65,11 @@ namespace ChipSharpConsoleWindows
         /// </summary>
         public bool WaitingForKeyPress { get; set; }
 
+        /// <summary>
+        /// The current loaded program
+        /// </summary>
+        public ushort[] Program { get; set; }
+
         #endregion
 
         #region Constructors
@@ -89,11 +94,26 @@ namespace ChipSharpConsoleWindows
         #region Methods
 
         /// <summary>
+        /// Load a program
+        /// </summary>
+        /// <param name="program">The program to load</param>
+        public void LoadProgram(ushort[] program)
+        {
+            Array.Clear(this.Memory, 0, this.Memory.Length);
+            for (int i = 0; i < program.Length; i++)
+            {
+                this.Memory[512 + i] = (byte)program[i];
+            }
+            this.PC = 512;
+        }
+
+        /// <summary>
         /// Executes an opcode
         /// </summary>
         /// <param name="opcode">The opcode to execute</param>
-        public void ExecuteOpcode(ushort opcode)
+        public void Step()
         {
+            ushort opcode = (ushort)((this.Memory[this.PC] << 8) | this.Memory[this.PC + 1]);
             ushort nibble = (ushort)(opcode & 0xF000);
             byte vx = (byte)((opcode & 0x0F00) >> 8);
             byte vy = (byte)((opcode & 0x00F0) >> 4);
@@ -102,6 +122,8 @@ namespace ChipSharpConsoleWindows
                 this.Registers[vx] = this.Keyboard;
                 return;
             }
+
+            this.PC += 2;
 
             switch (nibble)
             {
@@ -114,7 +136,7 @@ namespace ChipSharpConsoleWindows
                     else if (opcode == 0x00EE)
                     {
                         // Returns from a subroutine.
-                        this.Stack.Pop();
+                        this.PC = this.Stack.Pop();
                     }
                     else
                     {
@@ -255,6 +277,7 @@ namespace ChipSharpConsoleWindows
                             break;
                         case 0x0A:
                             this.WaitingForKeyPress = true;
+                            this.PC -= 2;
                             break;
                         case 0x15:
                             this.DelayTimer = this.Registers[vx];

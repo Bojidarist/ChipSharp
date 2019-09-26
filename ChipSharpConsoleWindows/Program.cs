@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.IO;
 
 namespace ChipSharpConsoleWindows
@@ -7,27 +7,33 @@ namespace ChipSharpConsoleWindows
     {
         static void Main()
         {
-            const string testROM = @"ROM\HeartMonitor.ch8";
+            const string testROM = @"ROM\sample.ch8";
             CPU cpu = new CPU();
 
             // Read the binary file correctly
             using (BinaryReader reader = new BinaryReader(File.Open(testROM, FileMode.Open)))
             {
-                while (reader.BaseStream.Position < reader.BaseStream.Length - 1)
+                List<ushort> program = new List<ushort>();
+                while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
-                    ushort opcode = (ushort)(reader.ReadByte() << 8 | reader.ReadByte());
-                    try
-                    {
-                        cpu.ExecuteOpcode(opcode);
-                    }
-                    catch (FormatException e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
+                    //ushort opcode = (ushort)(reader.ReadByte() << 8 | reader.ReadByte());
+                    program.Add(reader.ReadByte());
                 }
+
+                cpu.LoadProgram(program.ToArray());
             }
 
-            Console.ReadKey();
+            while (true)
+            {
+                try
+                {
+                    cpu.Step();
+                }
+                catch (System.Exception e)
+                {
+                    System.Console.WriteLine(e.Message);
+                }
+            }
         }
     }
 }
