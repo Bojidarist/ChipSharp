@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace ChipSharpConsoleWindows
 {
@@ -97,7 +98,7 @@ namespace ChipSharpConsoleWindows
         /// Load a program
         /// </summary>
         /// <param name="program">The program to load</param>
-        public void LoadProgram(ushort[] program)
+        public void LoadProgram(byte[] program)
         {
             Array.Clear(this.Memory, 0, this.Memory.Length);
             for (int i = 0; i < program.Length; i++)
@@ -229,16 +230,18 @@ namespace ChipSharpConsoleWindows
                     this.Registers[vx] = (byte)((this.RNGenerator.Next(0, 255)) & (byte)(opcode & 0xFF));
                     break;
                 case 0xD000:
+                    int x = this.Registers[(opcode & 0x0F00) >> 8];
+                    int y = this.Registers[(opcode & 0x00F0) >> 4];
                     int n = opcode & 0x000F;
                     this.Registers[15] = 0;
 
                     for (int i = 0; i < n; i++)
                     {
-                        byte mem = this.Memory[this.IAddress];
+                        byte mem = this.Memory[this.IAddress + i];
                         for (int j = 0; j < 8; j++)
                         {
                             byte pixel = (byte)((mem >> (7 - j)) & 0x01);
-                            int index = vx + j + (vy + i) * 64;
+                            int index = x + j + (y + i) * 64;
                             if (pixel == 1 && this.Display[index] == 1)
                             {
                                 this.Registers[15] = 1;
@@ -314,6 +317,31 @@ namespace ChipSharpConsoleWindows
                     break;
                 default:
                     throw new FormatException($"Unsupported opcode: { opcode.ToString("X4") }");
+            }
+        }
+
+        /// <summary>
+        /// Draw a frame on the screen
+        /// </summary>
+        public void DrawDisplay()
+        {
+            Console.Clear();
+            StringBuilder line = new StringBuilder(64);
+            for (int y = 0; y < 32; y++)
+            {
+                for (int x = 0; x < 64; x++)
+                {
+                    if (Display[x + y * 64] != 0)
+                    {
+                        line.Append('*');
+                    }
+                    else
+                    {
+                        line.Append(' ');
+                    }
+                }
+                Console.WriteLine(line);
+                line.Clear();
             }
         }
 
