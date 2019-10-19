@@ -8,7 +8,7 @@ namespace ChipSharpConsoleWindows
     {
         static void Main()
         {
-            const string testROM = @"ROM\HeartMonitor.ch8";
+            const string testROM = @"C:\Users\bojid\Desktop\Old Desktop\Pong.ch8";
             CPU cpu = new CPU();
 
             // Read the binary file correctly

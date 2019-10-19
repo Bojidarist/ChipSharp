@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
-using System.Threading;
 
 namespace ChipSharpConsoleWindows
 {
@@ -10,6 +10,14 @@ namespace ChipSharpConsoleWindows
     /// </summary>
     public class CPU
     {
+        #region Private members
+
+        /// <summary>
+        /// A <see cref="Stopwatch"/> for tracking time
+        /// </summary>
+        private Stopwatch _watch = new Stopwatch();
+
+        #endregion
         #region Public properties
 
         /// <summary>
@@ -115,6 +123,23 @@ namespace ChipSharpConsoleWindows
         /// <param name="opcode">The opcode to execute</param>
         public void Step()
         {
+            if (!_watch.IsRunning)
+            {
+                _watch.Start();
+            }
+            else if (_watch.ElapsedMilliseconds > 16)
+            {
+                if (this.DelayTimer > 0)
+                {
+                    this.DelayTimer--;
+                }
+                if (this.SoundTimer > 0)
+                {
+                    this.SoundTimer--;
+                }
+                _watch.Restart();
+            }
+
             ushort opcode = (ushort)((this.Memory[this.PC] << 8) | this.Memory[this.PC + 1]);
             ushort nibble = (ushort)(opcode & 0xF000);
             byte vx = (byte)((opcode & 0x0F00) >> 8);
@@ -243,6 +268,12 @@ namespace ChipSharpConsoleWindows
                         {
                             byte pixel = (byte)((mem >> (7 - j)) & 0x01);
                             int index = x + j + (y + i) * 64;
+
+                            if (index >= this.Display.Length)
+                            {
+                                continue;
+                            }
+
                             if (pixel == 1 && this.Display[index] == 1)
                             {
                                 this.Registers[15] = 1;
