@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace ChipSharpConsoleWindows
 {
@@ -249,6 +250,8 @@ namespace ChipSharpConsoleWindows
                             this.Display[index] = (byte)(this.Display[index] ^ pixel);
                         }
                     }
+
+                    this.DrawDisplay();
                     break;
                 case 0xE000:
                     if ((opcode & 0x00FF) == 0x009E)

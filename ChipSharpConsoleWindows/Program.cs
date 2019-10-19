@@ -32,7 +32,6 @@ namespace ChipSharpConsoleWindows
                 try
                 {
                     cpu.Step();
-                    cpu.DrawDisplay();
                 }
                 catch (Exception e)
                 {
