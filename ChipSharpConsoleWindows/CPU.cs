@@ -63,7 +63,7 @@ namespace ChipSharpConsoleWindows
         /// <summary>
         /// Original CHIP-8 Display resolution is 64×32 pixels, and color is monochrome.
         /// </summary>
-        public byte[] Display { get; set; }
+        public uint[] Display { get; set; }
 
         /// <summary>
         /// Random number generator
@@ -89,7 +89,7 @@ namespace ChipSharpConsoleWindows
         /// </summary>
         public CPU()
         {
-            this.Display = new byte[64 * 32];
+            this.Display = new uint[64 * 32];
             this.Memory = new byte[4096];
             this.Registers = new byte[16];
             this.Stack = new Stack<ushort>(24);
@@ -303,15 +303,15 @@ namespace ChipSharpConsoleWindows
                                 continue;
                             }
 
-                            if (pixel == 1 && this.Display[index] == 1)
+                            if (pixel == 1 && this.Display[index] != 0)
                             {
                                 this.Registers[15] = 1;
                             }
-                            this.Display[index] = (byte)(this.Display[index] ^ pixel);
+                            this.Display[index] = (this.Display[index] != 0 && pixel == 0 || this.Display[index] == 0 && pixel == 1) ? 0xffffffff : 0;          /*(byte)(this.Display[index] ^ pixel);*/
                         }
                     }
 
-                    this.DrawDisplay();
+                    //this.DrawDisplay();
                     break;
                 case 0xE000:
                     if ((opcode & 0x00FF) == 0x009E)
