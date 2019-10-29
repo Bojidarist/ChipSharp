@@ -15,7 +15,7 @@ namespace ChipSharpConsoleWindows
         /// <summary>
         /// A <see cref="Stopwatch"/> for tracking time
         /// </summary>
-        private Stopwatch _watch = new Stopwatch();
+        private readonly Stopwatch _watch = new Stopwatch();
 
         #endregion
         #region Public properties
@@ -58,7 +58,7 @@ namespace ChipSharpConsoleWindows
         /// <summary>
         /// The keyboard
         /// </summary>
-        public byte Keyboard { get; set; }
+        public ushort Keyboard { get; set; }
 
         /// <summary>
         /// Original CHIP-8 Display resolution is 64×32 pixels, and color is monochrome.
@@ -175,8 +175,9 @@ namespace ChipSharpConsoleWindows
             byte vy = (byte)((opcode & 0x00F0) >> 4);
             if (this.WaitingForKeyPress)
             {
-                this.Registers[vx] = this.Keyboard;
-                return;
+                //this.Registers[vx] = this.Keyboard;
+                throw new NotImplementedException();
+                //return;
             }
 
             this.PC += 2;

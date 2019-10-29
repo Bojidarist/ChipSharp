@@ -66,6 +66,18 @@ namespace ChipSharpConsoleWindows
                         {
                             quit = true;
                         }
+                        else if (sdlEvent.type == SDL.SDL_EventType.SDL_KEYDOWN)
+                        {
+                            int key = KeyCodeToKey((int)sdlEvent.key.keysym.sym);
+                            Console.WriteLine(key);
+                            cpu.Keyboard |= (ushort)key;
+                        }
+                        else if (sdlEvent.type == SDL.SDL_EventType.SDL_KEYUP)
+                        {
+                            int key = KeyCodeToKey((int)sdlEvent.key.keysym.sym);
+                            Console.WriteLine(key);
+                            cpu.Keyboard &= (ushort)~key;
+                        }
                     }
                     var displayHandle = GCHandle.Alloc(cpu.Display, GCHandleType.Pinned);
                     if (sdlTexture != IntPtr.Zero)
@@ -90,6 +102,27 @@ namespace ChipSharpConsoleWindows
                     Console.WriteLine(e.Message);
                 }
             }
+
+            SDL.SDL_DestroyRenderer(renderer);
+            SDL.SDL_DestroyWindow(window);
+        }
+
+        /// <summary>
+        /// Converts a keycode to a key
+        /// </summary>
+        private static int KeyCodeToKey(int keycode)
+        {
+            int keyIndex;
+            if (keycode < 58)
+            {
+                keyIndex = keycode - 48;
+            }
+            else
+            {
+                keyIndex = keycode - 87;
+            }
+
+            return (1 << keyIndex);
         }
     }
 }
